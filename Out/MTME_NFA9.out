@@ -1,0 +1,173 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-redhat-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+Online License checked out Mon May  5 04:01:44 2025
+[Previously saved workspace restored]
+
+> # Multi-Trait Multi-Environment models ----
+> # This script fits Multi-Trait Multi-Environment models
+> 
+> # Clean workspace
+> rm(list = objects())  # Removes all objects from the environment.
+> 
+> # Packages ----
+> library(tidyverse) # R packages for data science.
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.4     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> library(asreml) # ASReml-R package.
+Loading required package: Matrix
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+Loading ASReml-R version 4.2
+
+> source('Functions_MTME.R')  # Load functions
+> 
+> # Use for HPC only
+> setwd('~/mtme-gsi4wheat/')
+> 
+> # Load data ----
+> ## Pheno & Ginv
+> ILYT_Pheno <- readRDS('Data/ILYT_Pheno.rds') # Load the phenotypic data.
+> Ginv <- readRDS('Data/Ginv.rds') # Load the relationship matrix
+> 
+> # Set k
+> k <- 9
+> 
+> # Fit NFA9 model ----
+> ## Run model ----
+> MTME_NFA9.asr <- asreml(
++   Pheno_z ~ TraitEnv,
++   random = ~ rr(TraitEnv,k):vm(Gkeep, Ginv) + diag(TraitEnv):vm(Gkeep, Ginv) +
++     diag(TraitEnv):ide(Gkeep) + 
++     diag(TraitEnv):Block, 
++   residual = ~ dsum(~ ar1(Col):ar1(Row) | TraitEnv),
++   sparse = ~ TraitEnv:Gdrop,
++   data = ILYT_Pheno,
++   na.action = na.method(x = 'include'),
++   maxit = 13,
++   workspace = '96gb'
++ )
+Warning messages:
+1: In asreml(Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Log-likelihood not converged
+2: In asreml(Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Some components changed by more than 1% on the last iteration
+> 
+> # Print model info
+> print(paste('convergence =', MTME_NFA9.asr$converge))
+[1] "convergence = FALSE"
+> MTME_NFA9.asr$trace |>
++   as.data.frame() |> rownames_to_column('Iteration') |>
++   filter(Iteration=='LogLik') |> print()
+  Iteration        1        2        3        4        5        6        7
+1    LogLik 6369.159 8616.994 12195.04 15007.93 16499.37 17253.33 17773.57
+         8        9       10       11      12      13      14
+1 18170.22 18495.86 18755.47 18951.66 19083.8 19169.1 19169.1
+> 
+> # Save
+> save.image('Data/MTME_NFA9.RData')
+> 
+> # Update model ----
+> MTME_NFA9.asr <- update_asreml(MTME_NFA9.asr, 
++                                max_updates = 20,
++                                save_path = "Data/MTME_NFA9.RData")
+[1] "Update 1"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3        4        5        6        7
+1    LogLik 19223.96 19247.87 19275.99 19296.37 19317.69 19331.78 19342.26
+         8        9       10       11       12       13       14
+1 19350.07 19355.65 19360.49 19365.22 19369.64 19375.22 19375.22
+[1] "Update 2"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3       4        5        6        7
+1    LogLik 19380.81 19382.39 19386.43 19390.2 19395.08 19397.96 19399.95
+         8        9       10      11       12       13       14
+1 19402.17 19404.07 19405.77 19407.3 19409.51 19411.47 19411.47
+[1] "Update 3"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3        4        5        6        7
+1    LogLik 19414.12 19414.59 19415.68 19417.12 19418.01 19418.73 19419.72
+         8        9       10      11       12       13       14
+1 19420.97 19421.72 19422.71 19423.9 19424.37 19424.98 19424.98
+[1] "Update 4"
+[1] "Convergence = FALSE"
+  Iteration        1        2     3        4        5        6        7
+1    LogLik 19425.64 19425.71 19426 19426.37 19426.82 19426.94 19427.11
+         8        9       10       11       12       13       14
+1 19427.38 19427.74 19428.31 19429.13 19429.32 19429.48 19429.48
+[1] "Update 5"
+[1] "Convergence = FALSE"
+  Iteration        1        2       3        4        5        6        7
+1    LogLik 19429.72 19429.75 19429.9 19430.13 19430.47 19430.55 19430.68
+         8        9       10       11       12       13       14
+1 19430.92 19430.99 19431.11 19431.35 19431.42 19431.55 19431.55
+[1] "Update 6"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3        4        5        6        7
+1    LogLik 19431.79 19431.82 19431.97 19432.21 19432.56 19433.18 19433.31
+         8        9      10       11       12       13       14
+1 19433.47 19433.72 19434.1 19434.19 19434.33 19434.61 19434.61
+[1] "Update 7"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3        4        5        6        7
+1    LogLik 19435.03 19435.07 19435.26 19435.59 19436.09 19436.21 19436.41
+        8        9       10       11      12       13       14
+1 19436.8 19437.39 19437.53 19437.76 19438.2 19438.32 19438.32
+[1] "Update 8"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3        4       5        6        7
+1    LogLik 19438.55 19438.59 19438.86 19439.28 19439.4 19439.61 19439.98
+         8        9       10    11       12       13       14
+1 19440.47 19440.57 19440.73 19441 19441.34 19441.78 19441.78
+[1] "Update 9"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3        4        5        6        7
+1    LogLik 19441.85 19441.87 19441.96 19442.09 19442.24 19442.44 19442.65
+         8        9       10       11       12       13       14
+1 19442.83 19442.96 19443.05 19443.13 19443.19 19443.24 19443.24
+[1] "Update 10"
+[1] "Convergence = FALSE"
+  Iteration        1       2        3        4        5       6        7
+1    LogLik 19443.28 19443.3 19443.34 19443.36 19443.38 19443.4 19443.43
+         8        9       10       11       12       13       14
+1 19443.45 19443.47 19443.49 19443.51 19443.53 19443.55 19443.55
+[1] "Update 11"
+[1] "Convergence = TRUE"
+  Iteration        1        2        3
+1    LogLik 19443.56 19443.57 19443.57
+[1] "Model successfully converged!"
+There were 21 warnings (use warnings() to see them)
+> 
+> # Save
+> save.image('Data/MTME_NFA9.RData')
+> 
+> proc.time()
+     user    system   elapsed 
+881630.47  33173.37 441071.42 

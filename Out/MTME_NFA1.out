@@ -1,0 +1,143 @@
+
+R version 4.4.2 (2024-10-31) -- "Pile of Leaves"
+Copyright (C) 2024 The R Foundation for Statistical Computing
+Platform: x86_64-redhat-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # Multi-Trait Multi-Environment models ----
+> # This script fits Multi-Trait Multi-Environment models
+> 
+> # Clean workspace
+> rm(list = objects())  # Removes all objects from the environment.
+> 
+> # Packages ----
+> library(tidyverse) # R packages for data science.
+── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.5
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.5.1     ✔ tibble    3.2.1
+✔ lubridate 1.9.4     ✔ tidyr     1.3.1
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+> library(asreml) # ASReml-R package.
+Loading required package: Matrix
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+Online License checked out Fri May  2 22:47:29 2025
+Loading ASReml-R version 4.2
+
+> source('Functions_MTME.R')  # Load functions
+> 
+> # Use for HPC only
+> setwd('~/mtme-gsi4wheat/')
+> 
+> # Load data ----
+> ## Pheno & Ginv
+> ILYT_Pheno <- readRDS('Data/ILYT_Pheno.rds') # Load the phenotypic data.
+> Ginv <- readRDS('Data/Ginv.rds') # Load the relationship matrix
+> 
+> # Set k
+> k <- 1 
+> 
+> # Fit NFA1 model ----
+> ## Run model ----
+> MTME_NFA1.asr <- asreml(
++   Pheno_z ~ TraitEnv,
++   random = ~ rr(TraitEnv,k):vm(Gkeep, Ginv) + diag(TraitEnv):vm(Gkeep, Ginv) +
++     diag(TraitEnv):ide(Gkeep) + 
++     diag(TraitEnv):Block, 
++   residual = ~ dsum(~ ar1(Col):ar1(Row) | TraitEnv),
++   sparse = ~ TraitEnv:Gdrop,
++   data = ILYT_Pheno,
++   na.action = na.method(x = 'include'),
++   maxit = 13,
++   workspace = '16gb'
++ )
+Warning messages:
+1: In asreml(Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Log-likelihood not converged
+2: In asreml(Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Some components changed by more than 1% on the last iteration
+> 
+> # Print model info
+> print(paste('convergence =', MTME_NFA1.asr$converge))
+[1] "convergence = FALSE"
+> MTME_NFA1.asr$trace |>
++   as.data.frame() |> rownames_to_column('Iteration') |>
++   filter(Iteration=='LogLik') |> print()
+  Iteration        1        2        3        4       5        6        7
+1    LogLik 10035.51 11963.84 13846.32 14767.11 15078.1 15206.57 15290.49
+         8        9       10       11       12       13       14
+1 15328.48 15366.91 15388.31 15411.28 15430.11 15445.91 15445.91
+> 
+> # Save
+> save.image('Data/MTME_NFA1.RData')
+> 
+> # Update model ----
+> MTME_NFA1.asr <- update_asreml(MTME_NFA1.asr, 
++                                max_updates = 20,
++                                save_path = "Data/MTME_NFA1.RData")
+[1] "Update 1"
+[1] "Convergence = FALSE"
+  Iteration       1        2        3        4        5        6        7
+1    LogLik 15460.1 15464.53 15472.42 15486.07 15500.37 15516.23 15533.08
+         8        9       10       11       12       13       14
+1 15549.95 15566.52 15582.14 15592.22 15603.37 15612.47 15612.47
+[1] "Update 2"
+[1] "Convergence = FALSE"
+  Iteration        1       2        3        4       5       6        7
+1    LogLik 15619.88 15621.9 15627.54 15631.73 15634.9 15637.3 15639.14
+         8        9       10       11       12       13       14
+1 15640.54 15641.61 15642.45 15643.09 15643.59 15643.98 15643.98
+[1] "Update 3"
+[1] "Convergence = FALSE"
+  Iteration        1        2        3        4        5        6        7
+1    LogLik 15644.28 15644.36 15644.57 15644.75 15644.88 15644.99 15645.07
+         8        9       10       11      12       13       14
+1 15645.14 15645.19 15645.24 15645.27 15645.3 15645.32 15645.32
+[1] "Update 4"
+[1] "Convergence = TRUE"
+  Iteration        1        2        3        4        5        6
+1    LogLik 15645.33 15645.34 15645.35 15645.36 15645.37 15645.37
+[1] "Model successfully converged!"
+Warning messages:
+1: In asreml(fixed = Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Log-likelihood not converged
+2: In asreml(fixed = Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Some components changed by more than 1% on the last iteration
+3: In asreml(fixed = Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Log-likelihood not converged
+4: In asreml(fixed = Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Some components changed by more than 1% on the last iteration
+5: In asreml(fixed = Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Log-likelihood not converged
+6: In asreml(fixed = Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Some components changed by more than 1% on the last iteration
+7: In asreml(fixed = Pheno_z ~ TraitEnv, random = ~rr(TraitEnv, k):vm(Gkeep,  :
+  Some components changed by more than 1% on the last iteration
+> 
+> # Save
+> save.image('Data/MTME_NFA1.RData')
+> 
+> proc.time()
+     user    system   elapsed 
+46829.605  2700.309 12909.138 
