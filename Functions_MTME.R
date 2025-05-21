@@ -2,7 +2,7 @@
 
 # Update ASReml-R ----
 # This function updates ASReml-R until it converges
-update_asreml <- function(mod, max_updates = 5, save_path) {
+update_asreml <- function(mod, max_updates = 5) {
   count <- 0
   
   while (!mod$converge && count < max_updates) {
@@ -10,28 +10,24 @@ update_asreml <- function(mod, max_updates = 5, save_path) {
     mod <- update(mod)
     
     # Print model update information
-    print(paste('Update', count))
-    print(paste('Convergence =', mod$converge))
+    message("Update ", count, ": Convergence = ", mod$converge)
     
     # Print LogLik value
     loglik <- mod$trace |>
       as.data.frame() |>
-      rownames_to_column('Iteration') |>
-      filter(Iteration == 'LogLik')
+      tibble::rownames_to_column("Iteration") |>
+      dplyr::filter(Iteration == "LogLik")
     
     print(loglik)
-    
-    # Save model state after each update
-    save.image(save_path)
   }
   
   if (mod$converge) {
-    print('Model successfully converged!')
+    message("Model successfully converged!")
   } else {
-    print('Maximum updates reached. Model did not converge.')
+    message("Maximum updates reached. Model did not converge.")
   }
   
-  return(mod) # Return the final model
+  return(mod)
 }
 
 # % Va----
