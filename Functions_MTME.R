@@ -2,7 +2,7 @@
 
 # Update ASReml-R ----
 # This function updates ASReml-R until it converges
-update_asreml <- function(mod, max_updates = 5) {
+update_asreml <- function(mod, max_updates = 100) {
   count <- 0
   
   while (!mod$converge && count < max_updates) {
